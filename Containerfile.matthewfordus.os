@@ -105,7 +105,6 @@ RUN ARCH=$(uname -m); \
     zypper --non-interactive install --no-recommends -- \
       patterns-base-selinux \
       container-selinux \
-      k3s-selinux \
       rke2-selinux \
       audit
 
