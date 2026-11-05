@@ -135,11 +135,12 @@ ADD --chmod=0755 https://github.com/rancher/system-agent/releases/download/${RAN
 RUN echo "${RANCHER_SYSTEM_AGENT_CHECKSUM} /usr/sbin/elemental-system-agent" | sha256sum -c -
 
 # Admin user: key-only SSH login, passwordless sudo
-RUN useradd -m -s /bin/bash -G wheel admin && \
+RUN useradd -m -s /bin/bash admin && \
     install -d -m 0700 -o admin -g "$(id -gn admin)" /home/admin/.ssh && \
     echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJorDQfNfB/mA9bM35pYZbw0Mnt/K5Js9iYsZuazQBGt mford@LT342" > /home/admin/.ssh/authorized_keys && \
     chown admin:"$(id -gn admin)" /home/admin/.ssh/authorized_keys && \
     chmod 0600 /home/admin/.ssh/authorized_keys && \
+    mkdir -p /etc/sudoers.d && \
     echo "admin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/admin && \
     chmod 0440 /etc/sudoers.d/admin
 
