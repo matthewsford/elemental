@@ -93,6 +93,12 @@ RUN ARCH=$(uname -m); CHECKSUM=${NMC_x86_CHECKSUM}; \
     echo "${CHECKSUM} /usr/sbin/nmc" | sha256sum -c -
 RUN chmod +x /usr/sbin/nmc
 
+# rke2-selinux is not in the Leap repos; get it from Rancher's RKE2 repo
+RUN rpm --import https://rpm.rancher.io/public.key && \
+    zypper --non-interactive addrepo --refresh \
+      https://rpm.rancher.io/rke2/stable/common/sle/noarch rke2-common && \
+    zypper --non-interactive refresh rke2-common
+
 # SELinux policy and tools
 RUN ARCH=$(uname -m); \
     [[ "${ARCH}" == "aarch64" ]] && ARCH="arm64"; \
