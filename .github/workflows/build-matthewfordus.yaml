@@ -1,0 +1,84 @@
+name: Build matthewfordus image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - Containerfile.matthewfordus.*
+      - framework/**
+      - manifest.yaml
+      - .github/workflows/build-matthewfordus.yaml
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
+env:
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Tag: <UTC date>-<build number of the day>-<short commit>, e.g. 20261105-2-70ed9ac
+      - name: Compute tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DAY=$(date -u +%F)
+          N=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/workflows/build-matthewfordus.yaml/runs?created=$DAY&per_page=100" \
+                --jq "[.workflow_runs[] | select(.id <= $GITHUB_RUN_ID)] | length" | paste -sd+ | bc)
+          echo "TAG=${DAY//-/}-${N}-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      # Same prerequisites as doc/DEVELOPMENT.md: local register + toolkit images.
+      - uses: actions/checkout@v4
+        with:
+          repository: rancher/elemental-operator
+          ref: v1.9.3
+          path: elemental-operator
+      - uses: actions/checkout@v4
+        with:
+          repository: rancher/elemental-toolkit
+          # .obs/specfile/elemental/elemental.spec requires toolkit >= 2.2.0, < 2.3.0
+          ref: v2.2.10
+          path: elemental-toolkit
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build register and toolkit images
+        run: |
+          make -C elemental-operator build-docker-register
+          make -C elemental-toolkit VERSION=dev build
+
+      - name: Build OS image
+        run: |
+          docker build \
+            --build-arg ELEMENTAL_TOOLKIT=docker.io/local/elemental-toolkit:dev \
+            --build-arg ELEMENTAL_REGISTER=docker.io/local/elemental-register:dev \
+            --build-arg RANCHER_SYSTEM_AGENT_VERSION=v0.3.16 \
+            --build-arg RANCHER_SYSTEM_AGENT_CHECKSUM=686dd937ce907185b642b12f34b0f94a9781b73f7d0d13e4204867d2f753249a \
+            -t $REGISTRY/elemental-os:$TAG -t $REGISTRY/elemental-os:latest \
+            -f Containerfile.matthewfordus.os .
+
+      - name: Build ISO image
+        run: |
+          docker build \
+            --build-arg ELEMENTAL_OS_IMAGE=$REGISTRY/elemental-os:$TAG \
+            -t $REGISTRY/elemental-iso:$TAG -t $REGISTRY/elemental-iso:latest \
+            -f Containerfile.matthewfordus.iso .
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        run: |
+          docker push --all-tags $REGISTRY/elemental-os
+          docker push --all-tags $REGISTRY/elemental-iso
