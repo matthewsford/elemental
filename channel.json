@@ -1,0 +1,16 @@
+[
+  {
+    "metadata": {
+      "name": "matthewfordus-20261109-2-76fd7fa"
+    },
+    "spec": {
+      "version": "20261109-2-76fd7fa",
+      "type": "container",
+      "metadata": {
+        "upgradeImage": "ghcr.io/matthewsford/elemental-os:20261109-2-76fd7fa",
+        "image": "ghcr.io/matthewsford/elemental-iso:20261109-2-76fd7fa",
+        "displayName": "matthewfordus-20261109-2-76fd7fa"
+      }
+    }
+  }
+]
