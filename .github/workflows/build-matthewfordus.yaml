@@ -14,9 +14,14 @@ on:
       - .github/workflows/build-matthewfordus.yaml
 
 permissions:
-  contents: read
+  contents: write # push channel.json to gh-pages
   packages: write
   actions: read
+
+# Serialize runs so concurrent builds don't race on the gh-pages push.
+concurrency:
+  group: build-matthewfordus
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io/${{ github.repository_owner }}
@@ -85,3 +90,38 @@ jobs:
         run: |
           docker push --all-tags $REGISTRY/elemental-os
           docker push --all-tags $REGISTRY/elemental-iso
+
+      # Publish an Elemental ManagedOSVersionChannel (type: json) on gh-pages.
+      # Each build is prepended to channel.json; older versions are kept for rollback.
+      - name: Update channel.json on gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$REPO_URL" gh-pages >/dev/null 2>&1; then
+            git clone --branch gh-pages --depth 1 "$REPO_URL" pages
+          else
+            git init pages
+            git -C pages checkout --orphan gh-pages
+            git -C pages remote add origin "$REPO_URL"
+          fi
+
+          cd pages
+          [ -f channel.json ] || echo '[]' > channel.json
+          NAME="matthewfordus-$TAG"
+          jq --arg name "$NAME" --arg tag "$TAG" \
+             --arg os "$REGISTRY/elemental-os:$TAG" \
+             --arg iso "$REGISTRY/elemental-iso:$TAG" \
+             '[{metadata: {name: $name},
+                spec: {version: $tag, type: "container",
+                       metadata: {upgradeImage: $os, image: $iso, displayName: $name}}}]
+              + map(select(.metadata.name != $name))' \
+             channel.json > channel.json.new
+          mv channel.json.new channel.json
+          touch .nojekyll
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add channel.json .nojekyll
+          git commit -m "Add $NAME to channel"
+          git push origin HEAD:gh-pages
