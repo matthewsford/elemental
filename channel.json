@@ -1,6 +1,40 @@
 [
   {
     "metadata": {
+      "name": "matthewfordus-20261109-3-9cf3a1b-os"
+    },
+    "spec": {
+      "version": "20261109-3-9cf3a1b",
+      "type": "container",
+      "metadata": {
+        "upgradeImage": "ghcr.io/matthewsford/elemental-os:20261109-3-9cf3a1b",
+        "displayName": "matthewfordus-20261109-3-9cf3a1b OS",
+        "platforms": [
+          "linux/x86_64"
+        ],
+        "created": 1794255902
+      }
+    }
+  },
+  {
+    "metadata": {
+      "name": "matthewfordus-20261109-3-9cf3a1b-iso"
+    },
+    "spec": {
+      "version": "20261109-3-9cf3a1b",
+      "type": "iso",
+      "metadata": {
+        "uri": "ghcr.io/matthewsford/elemental-iso:20261109-3-9cf3a1b",
+        "displayName": "matthewfordus-20261109-3-9cf3a1b ISO",
+        "platforms": [
+          "linux/x86_64"
+        ],
+        "created": 1794255902
+      }
+    }
+  },
+  {
+    "metadata": {
       "name": "matthewfordus-20261109-2-76fd7fa"
     },
     "spec": {
