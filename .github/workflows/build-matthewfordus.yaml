@@ -109,13 +109,20 @@ jobs:
           cd pages
           [ -f channel.json ] || echo '[]' > channel.json
           NAME="matthewfordus-$TAG"
-          jq --arg name "$NAME" --arg tag "$TAG" \
+          # Two entries per build: a "container" entry (ManagedOSImage upgrades)
+          # and an "iso" entry (SeedImage / installation media).
+          jq --arg name "$NAME" --arg tag "$TAG" --argjson created "$(date +%s)" \
              --arg os "$REGISTRY/elemental-os:$TAG" \
              --arg iso "$REGISTRY/elemental-iso:$TAG" \
-             '[{metadata: {name: $name},
+             '[{metadata: {name: ($name + "-os")},
                 spec: {version: $tag, type: "container",
-                       metadata: {upgradeImage: $os, image: $iso, displayName: $name}}}]
-              + map(select(.metadata.name != $name))' \
+                       metadata: {upgradeImage: $os, displayName: ($name + " OS"),
+                                  platforms: ["linux/x86_64"], created: $created}}},
+               {metadata: {name: ($name + "-iso")},
+                spec: {version: $tag, type: "iso",
+                       metadata: {uri: $iso, displayName: ($name + " ISO"),
+                                  platforms: ["linux/x86_64"], created: $created}}}]
+              + map(select(.metadata.name != ($name + "-os") and .metadata.name != ($name + "-iso")))' \
              channel.json > channel.json.new
           mv channel.json.new channel.json
           touch .nojekyll
